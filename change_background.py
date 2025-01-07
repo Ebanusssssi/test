@@ -82,9 +82,9 @@ def main():
     st.subheader("Введите цвет фона (RGB):")
     
     # Поля для ручного ввода значений RGB
-    r_input = st.text_input("Красный (R)", "0")
-    g_input = st.text_input("Зеленый (G)", "0")
-    b_input = st.text_input("Синий (B)", "255")
+    r_input = st.text_input("Красный (R)", "245")
+    g_input = st.text_input("Зеленый (G)", "245")
+    b_input = st.text_input("Синий (B)", "245")
     
     # Преобразуем ввод в целые числа, с валидацией
     try:

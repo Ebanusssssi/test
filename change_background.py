@@ -80,12 +80,25 @@ def main():
     
     # Ввод цвета для фона
     st.subheader("Введите цвет фона (RGB):")
-    # Создаем три отдельных слайдера для RGB
-    r = st.slider("Красный (R)", 0, 255, 0, step=1)
-    g = st.slider("Зеленый (G)", 0, 255, 0, step=1)
-    b = st.slider("Синий (B)", 0, 255, 255, step=1)
-
-    st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
+    
+    # Поля для ручного ввода значений RGB
+    r_input = st.text_input("Красный (R)", "0")
+    g_input = st.text_input("Зеленый (G)", "0")
+    b_input = st.text_input("Синий (B)", "255")
+    
+    # Преобразуем ввод в целые числа, с валидацией
+    try:
+        r = int(r_input)
+        g = int(g_input)
+        b = int(b_input)
+        
+        if not (0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255):
+            raise ValueError("Цвет должен быть в диапазоне от 0 до 255 для каждого компонента.")
+        
+        st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
+    except ValueError as e:
+        st.error(f"Ошибка ввода: {e}")
+        return  # Прерываем выполнение, если ввод некорректен
     
     # Загрузка архива
     uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])

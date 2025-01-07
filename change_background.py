@@ -119,7 +119,7 @@ def main():
             if isinstance(result, str) and result.endswith(".zip"):
                 st.success("Обработка завершена! Скачать архив с изображениями:")
                 with open(result, 'rb') as f:
-                    st.download_button('Скачать архив', f, file_name='processed_images.zip')
+                    st.download_button('Скачать архив', f, file_name='BG_changed.zip')
             else:
                 st.error(result)
 

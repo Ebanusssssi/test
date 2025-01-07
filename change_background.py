@@ -78,29 +78,37 @@ def process_zip(input_zip, output_folder, bg_color):
 def main():
     st.title('Изменение фона изображений')
     
-    # Ввод цвета для фона
-    st.subheader("Введите цвет фона (RGB):")
+    # Инициализация состояния слайдеров и полей ввода
+    if 'r' not in st.session_state:
+        st.session_state.r = 0
+    if 'g' not in st.session_state:
+        st.session_state.g = 0
+    if 'b' not in st.session_state:
+        st.session_state.b = 255
     
     # Слайдеры для выбора цвета
-    r = st.slider("Красный (R)", 0, 255, 0, step=1)
-    g = st.slider("Зеленый (G)", 0, 255, 0, step=1)
-    b = st.slider("Синий (B)", 0, 255, 255, step=1)
+    st.session_state.r = st.slider("Красный (R)", 0, 255, st.session_state.r, step=1)
+    st.session_state.g = st.slider("Зеленый (G)", 0, 255, st.session_state.g, step=1)
+    st.session_state.b = st.slider("Синий (B)", 0, 255, st.session_state.b, step=1)
     
     # Ручной ввод значений
-    r_input = st.text_input("Красный (R)", str(r))
-    g_input = st.text_input("Зеленый (G)", str(g))
-    b_input = st.text_input("Синий (B)", str(b))
+    r_input = st.text_input("Красный (R)", str(st.session_state.r))
+    g_input = st.text_input("Зеленый (G)", str(st.session_state.g))
+    b_input = st.text_input("Синий (B)", str(st.session_state.b))
     
     # Обновляем слайдеры, если введены значения вручную
     try:
-        r = int(r_input) if r_input else r
-        g = int(g_input) if g_input else g
-        b = int(b_input) if b_input else b
+        if r_input:
+            st.session_state.r = int(r_input)
+        if g_input:
+            st.session_state.g = int(g_input)
+        if b_input:
+            st.session_state.b = int(b_input)
         
-        if not (0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255):
+        if not (0 <= st.session_state.r <= 255 and 0 <= st.session_state.g <= 255 and 0 <= st.session_state.b <= 255):
             raise ValueError("Цвет должен быть в диапазоне от 0 до 255 для каждого компонента.")
         
-        st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
+        st.write(f"Вы выбрали цвет: RGB({st.session_state.r}, {st.session_state.g}, {st.session_state.b})")
     except ValueError as e:
         st.error(f"Ошибка ввода: {e}")
         return  # Прерываем выполнение, если ввод некорректен
@@ -116,7 +124,7 @@ def main():
         # Кнопка для запуска обработки
         if st.button('Запустить обработку'):
             st.write("Обработка началась...")
-            bg_color = [r, g, b]  # Цвет фона
+            bg_color = [st.session_state.r, st.session_state.g, st.session_state.b]  # Цвет фона
             output_folder = "output_folder"
             
             result = process_zip("uploaded.zip", output_folder, bg_color)

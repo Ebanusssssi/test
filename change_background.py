@@ -58,7 +58,7 @@ def process_zip(input_zip, output_folder, bg_color):
                         continue
                     
                     # Меняем фон на выбранный цвет
-                    output_image_path = os.path.join(output_folder, f'processed_{filename}')
+                    output_image_path = os.path.join(output_folder, f'{filename}')
                     error = change_background(file_path, output_image_path, bg_color)
                     
                     if error:

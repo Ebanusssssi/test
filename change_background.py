@@ -3,11 +3,9 @@ import cv2
 import numpy as np
 import zipfile
 import os
+import uuid
+import shutil
 import tempfile
-
-# Функция для размытия альфа-канала
-def blur_alpha_channel(alpha_channel, blur_kernel_size=5):
-    return cv2.GaussianBlur(alpha_channel, (blur_kernel_size, blur_kernel_size), 0)
 
 # Функция для изменения фона на заданный цвет
 def change_background(image_path, output_path, bg_color, transparency_threshold=180):
@@ -23,18 +21,15 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
             alpha_channel = img[:, :, 3]
             transparent_mask = alpha_channel == 0
 
-            # Размытие альфа-канала
-            alpha_channel = blur_alpha_channel(alpha_channel)
-
-            # Маска для пикселей, которые не являются полностью прозрачными
-            mask = alpha_channel > transparency_threshold
-            img[~mask] = np.array([bg_color[2], bg_color[1], bg_color[0], 255])  # Заполняем альфа-канал также 255
-
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
             
             # Заменяем прозрачные пиксели на выбранный фон
             img[transparent_mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
+            
+            # Убираем ореолы вокруг объекта (пиксели с низким значением прозрачности)
+            mask = alpha_channel > transparency_threshold
+            img[~mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])
         
         else:  # Если альфа-канала нет, значит изображение имеет сплошной цвет фона
             # Переводим изображение в HSV для лучшей работы с цветами
@@ -136,4 +131,29 @@ def main():
     # Загрузка архива
     uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])
     
-    if uploaded_file is not None
+    if uploaded_file is not None:
+        # Сохраняем файл
+        with open("uploaded.zip", "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        # Кнопка для запуска обработки
+        if st.button('Запустить обработку'):
+            st.write("Обработка началась...")
+            bg_color = [r, g, b]  # Цвет фона
+            
+            # Запуск функции для обработки архива
+            result = process_zip("uploaded.zip", bg_color)
+            
+            if isinstance(result, str) and result.endswith(".zip"):
+                st.success("Обработка завершена! Скачать архив с изображениями:") 
+                with open(result, 'rb') as f:
+                    download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
+                    
+                    # Удаляем архив только после скачивания
+                    if download_button:
+                        os.remove(result)  # Удаляем архив после того, как пользователь скачает его
+            else:
+                st.error(result)
+
+if __name__ == "__main__":
+    main()

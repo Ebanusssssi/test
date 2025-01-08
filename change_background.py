@@ -3,6 +3,9 @@ import cv2
 import numpy as np
 import zipfile
 import os
+import uuid
+import shutil
+import tempfile
 
 # Функция для изменения фона на заданный цвет
 def change_background(image_path, output_path, bg_color):
@@ -35,30 +38,34 @@ def change_background(image_path, output_path, bg_color):
         return f"Ошибка при обработке изображения {image_path}: {e}"
 
 # Функция для работы с архивом
-def process_zip(input_zip, output_folder, bg_color):
+def process_zip(input_zip, bg_color):
     try:
-        # Создаем временную папку для хранения обработанных изображений
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-        
+        # Создаем уникальную временную папку для каждого архива
+        temp_folder = tempfile.mkdtemp()
+
         # Распаковываем архив во временную папку
         with zipfile.ZipFile(input_zip, 'r') as zip_ref:
-            zip_ref.extractall(output_folder)
-        
+            zip_ref.extractall(temp_folder)
+
         # Создаем новый архив для обработанных изображений
-        output_zip = os.path.join(output_folder, 'processed_images.zip')
+        output_zip = os.path.join(temp_folder, 'processed_images.zip')
+        
         with zipfile.ZipFile(output_zip, 'w') as zip_ref:
             # Проходим по всем файлам и папкам в извлеченной структуре
-            for root, dirs, files in os.walk(output_folder):
+            for root, dirs, files in os.walk(temp_folder):
                 for filename in files:
                     file_path = os.path.join(root, filename)
+                    
+                    # Пропускаем файлы и папки, начинающиеся с '__MACOSX' или '._'
+                    if filename.startswith('__MACOSX') or filename.startswith('._'):
+                        continue
                     
                     # Пропускаем если это не изображение
                     if not file_path.lower().endswith(('jpg', 'jpeg', 'png')):
                         continue
                     
                     # Меняем фон на выбранный цвет
-                    output_image_path = os.path.join(output_folder, f'{filename}')
+                    output_image_path = os.path.join(temp_folder, filename)
                     error = change_background(file_path, output_image_path, bg_color)
                     
                     if error:
@@ -66,13 +73,14 @@ def process_zip(input_zip, output_folder, bg_color):
                         continue
                     
                     # Добавляем обработанное изображение в архив
-                    zip_ref.write(output_image_path, os.path.relpath(output_image_path, output_folder))
-                    # Удаляем временный обработанный файл
-                    os.remove(output_image_path)
+                    zip_ref.write(output_image_path, os.path.relpath(output_image_path, temp_folder))
         
-        return output_zip  # Возвращаем путь к архиву с обработанными изображениями
+        # Возвращаем путь к архиву с обработанными изображениями
+        return output_zip
+
     except Exception as e:
         return f"Ошибка при обработке архива: {e}"
+
 
 # Основная часть программы для Streamlit
 def main():
@@ -80,25 +88,11 @@ def main():
     
     # Ввод цвета для фона
     st.subheader("Введите цвет фона (RGB):")
-    
-    # Поля для ручного ввода значений RGB
-    r_input = st.text_input("Красный (R)", "245")
-    g_input = st.text_input("Зеленый (G)", "245")
-    b_input = st.text_input("Синий (B)", "245")
-    
-    # Преобразуем ввод в целые числа, с валидацией
-    try:
-        r = int(r_input)
-        g = int(g_input)
-        b = int(b_input)
-        
-        if not (0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255):
-            raise ValueError("Цвет должен быть в диапазоне от 0 до 255 для каждого компонента.")
-        
-        st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
-    except ValueError as e:
-        st.error(f"Ошибка ввода: {e}")
-        return  # Прерываем выполнение, если ввод некорректен
+    r = st.slider("Красный (R)", 0, 255, 245, step=1)
+    g = st.slider("Зеленый (G)", 0, 255, 245, step=1)
+    b = st.slider("Синий (B)", 0, 255, 245, step=1)
+
+    st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
     
     # Загрузка архива
     uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])
@@ -112,14 +106,18 @@ def main():
         if st.button('Запустить обработку'):
             st.write("Обработка началась...")
             bg_color = [r, g, b]  # Цвет фона
-            output_folder = "output_folder"
             
-            result = process_zip("uploaded.zip", output_folder, bg_color)
+            # Запуск функции для обработки архива
+            result = process_zip("uploaded.zip", bg_color)
             
             if isinstance(result, str) and result.endswith(".zip"):
                 st.success("Обработка завершена! Скачать архив с изображениями:")
                 with open(result, 'rb') as f:
-                    st.download_button('Скачать архив', f, file_name='BG_changed.zip')
+                    download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
+                    
+                    # Удаляем архив только после скачивания
+                    if download_button:
+                        os.remove(result)  # Удаляем архив после того, как пользователь скачает его
             else:
                 st.error(result)
 

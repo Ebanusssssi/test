@@ -7,11 +7,11 @@ import uuid
 import shutil
 import tempfile
 
-# Функция для изменения фона на заданный цвет
-def change_background(image_path, output_path, bg_color, transparency_threshold=180):
+# Функция для изменения фона на заданный цвет с размытиями для сглаживания краев
+def change_background(image_path, output_path, bg_color):
     try:
-        # Загружаем изображение с альфа-каналом (если есть)
-        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        # Загружаем изображение
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Загружаем изображение с альфа-каналом
         if img is None:
             return f"Ошибка: не удалось загрузить изображение {image_path}"
         
@@ -21,16 +21,15 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
             alpha_channel = img[:, :, 3]
             transparent_mask = alpha_channel == 0
 
+            # Размытие для более мягкого перехода
+            blurred_mask = cv2.GaussianBlur(transparent_mask.astype(np.float32), (21, 21), 0)
+            blurred_mask = (blurred_mask > 0.5).astype(np.uint8)  # Преобразуем в бинарную маску после размытия
+
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
             
-            # Заменяем прозрачные пиксели на выбранный фон
-            img[transparent_mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
-            
-            # Убираем ореолы вокруг объекта (пиксели с низким значением прозрачности)
-            mask = alpha_channel > transparency_threshold
-            img[~mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])
-        
+            # Заменяем прозрачные пиксели на выбранный фон с учетом размытия
+            img[blurred_mask == 1] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
         else:  # Если альфа-канала нет, значит изображение имеет сплошной цвет фона
             # Переводим изображение в HSV для лучшей работы с цветами
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -45,12 +44,18 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
             white_mask = cv2.inRange(hsv, lower_white, upper_white)
             black_mask = cv2.inRange(hsv, lower_black, upper_black)
             
+            # Применяем размытие к маскам для белого и черного фона
+            blurred_white_mask = cv2.GaussianBlur(white_mask.astype(np.float32), (21, 21), 0)
+            blurred_black_mask = cv2.GaussianBlur(black_mask.astype(np.float32), (21, 21), 0)
+            blurred_white_mask = (blurred_white_mask > 0.5).astype(np.uint8)
+            blurred_black_mask = (blurred_black_mask > 0.5).astype(np.uint8)
+            
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
             
-            # Заменяем белый и черный фон на заданный цвет
-            img[white_mask == 255] = bg_color_bgr
-            img[black_mask == 255] = bg_color_bgr
+            # Заменяем белый и черный фон на заданный цвет с учетом размытия
+            img[blurred_white_mask == 1] = bg_color_bgr
+            img[blurred_black_mask == 1] = bg_color_bgr
         
         # Сохраняем обработанное изображение
         cv2.imwrite(output_path, img)
@@ -101,6 +106,7 @@ def process_zip(input_zip, bg_color):
 
     except Exception as e:
         return f"Ошибка при обработке архива: {e}"
+
 
 # Основная часть программы для Streamlit
 def main():

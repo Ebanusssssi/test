@@ -136,4 +136,29 @@ def main():
     # Загрузка архива
     uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])
     
-    if uploaded_file is not None
+    if uploaded_file is not None:
+        # Сохраняем файл
+        with open("uploaded.zip", "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        # Кнопка для запуска обработки
+        if st.button('Запустить обработку'):
+            st.write("Обработка началась...")
+            bg_color = [r, g, b]  # Цвет фона
+            
+            # Запуск функции для обработки архива
+            result = process_zip("uploaded.zip", bg_color)
+            
+            if isinstance(result, str) and result.endswith(".zip"):
+                st.success("Обработка завершена! Скачать архив с изображениями:") 
+                with open(result, 'rb') as f:
+                    download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
+                    
+                    # Удаляем архив только после скачивания
+                    if download_button:
+                        os.remove(result)  # Удаляем архив после того, как пользователь скачает его
+            else:
+                st.error(result)
+
+if __name__ == "__main__":
+    main()

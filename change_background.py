@@ -8,10 +8,10 @@ import shutil
 import tempfile
 
 # Функция для изменения фона на заданный цвет
-def change_background(image_path, output_path, bg_color):
+def change_background(image_path, output_path, bg_color, transparency_threshold=200):
     try:
-        # Загружаем изображение
-        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Загружаем изображение с альфа-каналом
+        # Загружаем изображение с альфа-каналом (если есть)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         if img is None:
             return f"Ошибка: не удалось загрузить изображение {image_path}"
         
@@ -27,6 +27,10 @@ def change_background(image_path, output_path, bg_color):
             # Заменяем прозрачные пиксели на выбранный фон
             img[transparent_mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
             
+            # Убираем ореолы вокруг объекта (пиксели с низким значением прозрачности)
+            mask = alpha_channel > transparency_threshold
+            img[~mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])
+        
         else:  # Если альфа-канала нет, значит изображение имеет сплошной цвет фона
             # Переводим изображение в HSV для лучшей работы с цветами
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -97,7 +101,6 @@ def process_zip(input_zip, bg_color):
 
     except Exception as e:
         return f"Ошибка при обработке архива: {e}"
-
 
 # Основная часть программы для Streamlit
 def main():

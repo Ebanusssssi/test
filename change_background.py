@@ -8,7 +8,7 @@ import shutil
 import tempfile
 
 # Функция для изменения фона на заданный цвет
-def change_background(image_path, output_path, bg_color, transparency_threshold=250):
+def change_background(image_path, output_path, bg_color, transparency_threshold=180):
     try:
         # Загружаем изображение с альфа-каналом (если есть)
         img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)

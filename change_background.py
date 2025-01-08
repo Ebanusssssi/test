@@ -124,7 +124,7 @@ def main():
             raise ValueError("Колір повинен бути в діапозоні від 0 до 255 для кожного компоненту.")
         
         st.markdown(
-            f'<span>Ви обрали колір: </span><div style="width: 30px; height: 30px; background-color: rgb({r}, {g}, {b}); border: 1px solid black;"></div>',
+            f'<div style="display: flex; align-items: center; gap: 10px;"><span>Ви обрали колір: </span><div style="width: 30px; height: 30px; background-color: rgb({r}, {g}, {b}); border: 1px solid black;"></div></div>',
             unsafe_allow_html=True
         )
     except ValueError as e:

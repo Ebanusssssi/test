@@ -13,7 +13,7 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
         # Загружаем изображение с альфа-каналом (если есть)
         img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         if img is None:
-            return f"Ошибка: не удалось загрузить изображение {image_path}"
+            return f"Помилка: не вдалося завантажити зображення {image_path}"
         
         # Проверяем, есть ли альфа-канал (прозрачность)
         if img.shape[2] == 4:  # Изображение с альфа-каналом
@@ -56,7 +56,7 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
         cv2.imwrite(output_path, img)
         return None  # Успешное завершение
     except Exception as e:
-        return f"Ошибка при обработке изображения {image_path}: {e}"
+        return f"Помилка при обробці зображення {image_path}: {e}"
 
 # Функция для работы с архивом
 def process_zip(input_zip, bg_color):
@@ -100,19 +100,19 @@ def process_zip(input_zip, bg_color):
         return output_zip
 
     except Exception as e:
-        return f"Ошибка при обработке архива: {e}"
+        return f"Помилка при обробці архіва {e}"
 
 # Основная часть программы для Streamlit
 def main():
-    st.title('Изменение фона изображений')
+    st.title('Зміна фону зображень')
     
     # Ввод цвета для фона
-    st.subheader("Введите цвет фона (RGB):")
+    st.subheader("Введіть колір фону (RGB):")
     
     # Поля для ручного ввода значений RGB
-    r_input = st.text_input("Красный (R)", "245")
-    g_input = st.text_input("Зеленый (G)", "245")
-    b_input = st.text_input("Синий (B)", "245")
+    r_input = st.text_input("Червоний (R)", "245")
+    g_input = st.text_input("Зелений (G)", "245")
+    b_input = st.text_input("Синій (B)", "245")
     
     # Преобразуем ввод в целые числа, с валидацией
     try:
@@ -121,15 +121,18 @@ def main():
         b = int(b_input)
         
         if not (0 <= r <= 255 and 0 <= g <= 255 and 0 <= b <= 255):
-            raise ValueError("Цвет должен быть в диапазоне от 0 до 255 для каждого компонента.")
+            raise ValueError("Колір повинен бути в діапозоні від 0 до 255 для кожного компоненту.")
         
-        st.write(f"Вы выбрали цвет: RGB({r}, {g}, {b})")
+        st.markdown(
+            f'<div style="width: 50px; height: 50px; background-color: rgb({r}, {g}, {b}); border: 1px solid black;"></div>',
+            unsafe_allow_html=True
+        )
     except ValueError as e:
-        st.error(f"Ошибка ввода: {e}")
+        st.error(f"Помилка вводу: {e}")
         return  # Прерываем выполнение, если ввод некорректен
     
     # Загрузка архива
-    uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])
+    uploaded_file = st.file_uploader("Завантажте архів з зображеннями", type=['zip'])
     
     if uploaded_file is not None:
         # Сохраняем файл
@@ -137,17 +140,17 @@ def main():
             f.write(uploaded_file.getbuffer())
         
         # Кнопка для запуска обработки
-        if st.button('Запустить обработку'):
-            st.write("Обработка началась...")
+        if st.button('Запустити обробку'):
+            st.write("Обробка почалась...")
             bg_color = [r, g, b]  # Цвет фона
             
             # Запуск функции для обработки архива
             result = process_zip("uploaded.zip", bg_color)
             
             if isinstance(result, str) and result.endswith(".zip"):
-                st.success("Обработка завершена! Скачать архив с изображениями:") 
+                st.success("Обробка закінчена! Скачати архів з зображеннями:") 
                 with open(result, 'rb') as f:
-                    download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
+                    download_button = st.download_button('Завантажити архів', f, file_name='BG_changed.zip')
                     
                     # Удаляем архив только после скачивания
                     if download_button:

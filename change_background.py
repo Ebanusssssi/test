@@ -35,7 +35,7 @@ def change_background(image_path, output_path, bg_color):
             lower_white = np.array([0, 0, 200])
             upper_white = np.array([180, 20, 255])
             lower_black = np.array([0, 0, 0])
-            upper_black = np.array([180, 255, 50])
+            upper_black = np.array([180, 0, 0])
             
             # Маски для белого и черного фона
             white_mask = cv2.inRange(hsv, lower_white, upper_white)

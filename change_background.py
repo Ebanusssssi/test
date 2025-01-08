@@ -11,25 +11,42 @@ import tempfile
 def change_background(image_path, output_path, bg_color):
     try:
         # Загружаем изображение
-        img = cv2.imread(image_path)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Загружаем изображение с альфа-каналом
         if img is None:
             return f"Ошибка: не удалось загрузить изображение {image_path}"
         
-        # Переводим изображение в HSV для лучшей работы с цветами
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        
-        # Определяем диапазоны для белого цвета в HSV
-        lower_white = np.array([0, 0, 200])
-        upper_white = np.array([180, 20, 255])
-        
-        # Маска для белого фона
-        mask = cv2.inRange(hsv, lower_white, upper_white)
-        
-        # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
-        bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
-        
-        # Меняем белый фон на заданный цвет
-        img[mask == 255] = bg_color_bgr
+        # Проверяем, есть ли альфа-канал (прозрачность)
+        if img.shape[2] == 4:  # Изображение с альфа-каналом
+            # Маска для прозрачных пикселей (пиксели с альфа-каналом равным 0)
+            alpha_channel = img[:, :, 3]
+            transparent_mask = alpha_channel == 0
+
+            # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
+            bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
+            
+            # Заменяем прозрачные пиксели на выбранный фон
+            img[transparent_mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
+            
+        else:  # Если альфа-канала нет, значит изображение имеет сплошной цвет фона
+            # Переводим изображение в HSV для лучшей работы с цветами
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            
+            # Определяем диапазоны для белого и черного цвета в HSV
+            lower_white = np.array([0, 0, 200])
+            upper_white = np.array([180, 20, 255])
+            lower_black = np.array([0, 0, 0])
+            upper_black = np.array([180, 255, 50])
+            
+            # Маски для белого и черного фона
+            white_mask = cv2.inRange(hsv, lower_white, upper_white)
+            black_mask = cv2.inRange(hsv, lower_black, upper_black)
+            
+            # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
+            bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
+            
+            # Заменяем белый и черный фон на заданный цвет
+            img[white_mask == 255] = bg_color_bgr
+            img[black_mask == 255] = bg_color_bgr
         
         # Сохраняем обработанное изображение
         cv2.imwrite(output_path, img)
@@ -125,7 +142,7 @@ def main():
             result = process_zip("uploaded.zip", bg_color)
             
             if isinstance(result, str) and result.endswith(".zip"):
-                st.success("Обработка завершена! Скачать архив с изображениями:")
+                st.success("Обработка завершена! Скачать архив с изображениями:") 
                 with open(result, 'rb') as f:
                     download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
                     

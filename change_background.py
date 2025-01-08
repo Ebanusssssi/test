@@ -20,7 +20,6 @@ def change_background(image_path, output_path, bg_color, transparency_threshold=
             # Маска для прозрачных пикселей (пиксели с альфа-каналом равным 0)
             alpha_channel = img[:, :, 3]
             transparent_mask = alpha_channel == 0
-            img[transparent_mask] = [bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255]  # Заменяем на фон ======================================= 
 
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]

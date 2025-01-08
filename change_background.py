@@ -3,15 +3,17 @@ import cv2
 import numpy as np
 import zipfile
 import os
-import uuid
-import shutil
 import tempfile
 
-# Функция для изменения фона на заданный цвет с размытиями для сглаживания краев
-def change_background(image_path, output_path, bg_color):
+# Функция для размытия альфа-канала
+def blur_alpha_channel(alpha_channel, blur_kernel_size=5):
+    return cv2.GaussianBlur(alpha_channel, (blur_kernel_size, blur_kernel_size), 0)
+
+# Функция для изменения фона на заданный цвет
+def change_background(image_path, output_path, bg_color, transparency_threshold=180):
     try:
-        # Загружаем изображение
-        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)  # Загружаем изображение с альфа-каналом
+        # Загружаем изображение с альфа-каналом (если есть)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         if img is None:
             return f"Ошибка: не удалось загрузить изображение {image_path}"
         
@@ -21,15 +23,19 @@ def change_background(image_path, output_path, bg_color):
             alpha_channel = img[:, :, 3]
             transparent_mask = alpha_channel == 0
 
-            # Размытие для более мягкого перехода
-            blurred_mask = cv2.GaussianBlur(transparent_mask.astype(np.float32), (21, 21), 0)
-            blurred_mask = (blurred_mask > 0.5).astype(np.uint8)  # Преобразуем в бинарную маску после размытия
+            # Размытие альфа-канала
+            alpha_channel = blur_alpha_channel(alpha_channel)
+
+            # Маска для пикселей, которые не являются полностью прозрачными
+            mask = alpha_channel > transparency_threshold
+            img[~mask] = np.array([bg_color[2], bg_color[1], bg_color[0], 255])  # Заполняем альфа-канал также 255
 
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
             
-            # Заменяем прозрачные пиксели на выбранный фон с учетом размытия
-            img[blurred_mask == 1] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
+            # Заменяем прозрачные пиксели на выбранный фон
+            img[transparent_mask] = np.array([bg_color_bgr[0], bg_color_bgr[1], bg_color_bgr[2], 255])  # Заполняем альфа-канал также 255
+        
         else:  # Если альфа-канала нет, значит изображение имеет сплошной цвет фона
             # Переводим изображение в HSV для лучшей работы с цветами
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -44,18 +50,12 @@ def change_background(image_path, output_path, bg_color):
             white_mask = cv2.inRange(hsv, lower_white, upper_white)
             black_mask = cv2.inRange(hsv, lower_black, upper_black)
             
-            # Применяем размытие к маскам для белого и черного фона
-            blurred_white_mask = cv2.GaussianBlur(white_mask.astype(np.float32), (21, 21), 0)
-            blurred_black_mask = cv2.GaussianBlur(black_mask.astype(np.float32), (21, 21), 0)
-            blurred_white_mask = (blurred_white_mask > 0.5).astype(np.uint8)
-            blurred_black_mask = (blurred_black_mask > 0.5).astype(np.uint8)
-            
             # Преобразуем цвет фона в формат BGR (OpenCV использует BGR)
             bg_color_bgr = np.array([bg_color[2], bg_color[1], bg_color[0]])  # [B, G, R]
             
-            # Заменяем белый и черный фон на заданный цвет с учетом размытия
-            img[blurred_white_mask == 1] = bg_color_bgr
-            img[blurred_black_mask == 1] = bg_color_bgr
+            # Заменяем белый и черный фон на заданный цвет
+            img[white_mask == 255] = bg_color_bgr
+            img[black_mask == 255] = bg_color_bgr
         
         # Сохраняем обработанное изображение
         cv2.imwrite(output_path, img)
@@ -107,7 +107,6 @@ def process_zip(input_zip, bg_color):
     except Exception as e:
         return f"Ошибка при обработке архива: {e}"
 
-
 # Основная часть программы для Streamlit
 def main():
     st.title('Изменение фона изображений')
@@ -137,29 +136,4 @@ def main():
     # Загрузка архива
     uploaded_file = st.file_uploader("Загрузите архив с изображениями", type=['zip'])
     
-    if uploaded_file is not None:
-        # Сохраняем файл
-        with open("uploaded.zip", "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        # Кнопка для запуска обработки
-        if st.button('Запустить обработку'):
-            st.write("Обработка началась...")
-            bg_color = [r, g, b]  # Цвет фона
-            
-            # Запуск функции для обработки архива
-            result = process_zip("uploaded.zip", bg_color)
-            
-            if isinstance(result, str) and result.endswith(".zip"):
-                st.success("Обработка завершена! Скачать архив с изображениями:") 
-                with open(result, 'rb') as f:
-                    download_button = st.download_button('Скачать архив', f, file_name='BG_changed.zip')
-                    
-                    # Удаляем архив только после скачивания
-                    if download_button:
-                        os.remove(result)  # Удаляем архив после того, как пользователь скачает его
-            else:
-                st.error(result)
-
-if __name__ == "__main__":
-    main()
+    if uploaded_file is not None
